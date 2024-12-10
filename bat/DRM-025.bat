@@ -27,28 +27,6 @@ SELECT * FROM v$version;
 EXIT;
 EOF
 
+:: 결과 안내
 echo 점검이 완료되었습니다. 결과는 %LOG_FILE% 파일에서 확인하세요.
 pause
-
-	평가항목ID	구분	통제분야	통제구분(대)	통제구분(중)	평가항목	위험도	상세설명	"평가기반
-(전자금융)"	"평가기반
-(주요정보)"	"평가대상
-(ORACLE)"	"평가대상
-(MSSQL)"	"평가대상
-(MYSQL)"	"평가대상
-(MariaDB)"	"평가대상
-(PostgreSQL)"	"평가대상
-(Tibero)"	"판단기준
-(Oracle)"	"판단방법
-(Oracle)"	"판단기준
-(MSSQL)"	"판단방법
-(MSSQL)"	"판단기준
-(MYSQL)"	"판단방법
-(MYSQL)"	"판단기준
-(MariaDB)"	"판단방법
-(MariaDB)"	"판단기준
-(PostgreSQL)"	"판단방법
-(PostgreSQL)"	"판단기준
-(Tibero)"	"판단방법
-(Tibero)"	"주요 정보통신기반시설 취약점 분석 평가기준
-(과학기술정보통신부고시 제2021-28호, 2021. 3. 29., 일부개정)"																				

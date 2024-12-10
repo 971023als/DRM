@@ -20,17 +20,22 @@ sqlplus -s %USERNAME%/%PASSWORD%@%TNS_ALIAS% as sysdba >> %LOG_FILE% <<EOF
 SET HEADING OFF;
 SET FEEDBACK OFF;
 SET LINESIZE 200;
+
+PROMPT [WITH GRANT OPTION이 활성화된 시스템 권한 확인];
 SELECT grantee, privilege, admin_option
 FROM dba_sys_privs
 WHERE admin_option = 'YES';
 
+PROMPT [WITH GRANT OPTION이 활성화된 테이블 권한 확인];
 SELECT grantee, privilege, grantable
 FROM dba_tab_privs
 WHERE grantable = 'YES';
 
+PROMPT [WITH GRANT OPTION이 활성화된 역할 확인];
 SELECT grantee, granted_role, admin_option
 FROM dba_role_privs
 WHERE admin_option = 'YES';
+
 EXIT;
 EOF
 
