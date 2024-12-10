@@ -1,38 +1,64 @@
-@echo off
-setlocal enabledelayedexpansion
+# 로그 파일 설정
+$logFile = "db_password_audit.log"
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+Set-Content -Path $logFile -Value "[DB 비밀번호 점검 결과]"
+Add-Content -Path $logFile -Value "점검 시간: $timestamp"
+Add-Content -Path $logFile -Value "======================================"
 
-echo ============================================
-echo CODE [DBM-001] 취약하게 설정된 비밀번호 존재
-echo ============================================
-echo [양호]: 모든 데이터베이스 계정의 비밀번호가 강력한 경우
-echo [취약]: 하나 이상의 데이터베이스 계정에 취약한 비밀번호가 설정된 경우
-echo ============================================
-
-echo 지원하는 데이터베이스: 1. MySQL 2. PostgreSQL 3. Oracle 4. MSSQL
-set /p DB_TYPE="사용 중인 데이터베이스 유형을 입력하세요: "
-
-if "%DB_TYPE%"=="1" (
-    set /p DB_USER="MySQL 사용자 이름을 입력하세요: "
-    set /p DB_PASS="MySQL 비밀번호를 입력하세요: "
-    mysql -u %DB_USER% -p%DB_PASS% -e "SELECT user, authentication_string FROM mysql.user;"
-    echo 비밀번호 강도 검사가 필요합니다.
-) else if "%DB_TYPE%"=="2" (
-    set /p DB_USER="PostgreSQL 사용자 이름을 입력하세요: "
-    set /p DB_PASS="PostgreSQL 비밀번호를 입력하세요: "
-    psql -U %DB_USER% -W %DB_PASS% -c "SELECT usename AS user, passwd AS pass FROM pg_shadow;"
-    echo 비밀번호 강도 검사가 필요합니다.
-) else if "%DB_TYPE%"=="3" (
-    echo Oracle 데이터베이스에 대한 수동 비밀번호 강도 검사가 필요합니다.
-) else if "%DB_TYPE%"=="4" (
-    echo MSSQL 데이터베이스에 대한 비밀번호 강도 검사는 주로 정책 설정을 통해 관리됩니다.
-    set /p DB_USER="MSSQL 사용자 이름을 입력하세요: "
-    set /p DB_PASS="MSSQL 비밀번호를 입력하세요: "
-    sqlcmd -U %DB_USER% -P %DB_PASS% -Q "SELECT name FROM sys.sql_logins WHERE type_desc = 'SQL_LOGIN' AND is_disabled = 0;"
-    echo MSSQL에서 SQL 로그인의 존재를 확인했습니다. 비밀번호 정책을 수동으로 검토하세요.
-) else (
-    echo 지원하지 않는 데이터베이스 유형입니다.
-    goto end
+# 취약한 비밀번호 목록 정의
+$weakPasswords = @(
+    "scott//tiger", "system//manager", "dbsnmp//dbsnmp", "sys//changeon_install",
+    "tracesvr//trace", "outln//outln", "ordplugins//ordplugins", "ordsys//ordsys",
+    "ctxsys//ctxsys", "mdsys//mdsys", "adams//wood", "blake//papr",
+    "clark//clth", "jones//steel", "lbacsys//lbacsys"
 )
 
-:end
-pause
+# 계정 정보 파일 읽기 (형식: 계정명//비밀번호)
+$accounts = Get-Content "db_accounts.txt"
+
+foreach ($account in $accounts) {
+    # 계정 정보 분리
+    $parts = $account -split "//"
+    $username = $parts[0]
+    $password = $parts[1]
+
+    $weakFlag = $false
+    $complexFlag = $false
+
+    # 취약한 비밀번호 확인
+    if ($weakPasswords -contains "$username//$password") {
+        $weakFlag = $true
+    }
+
+    # 비밀번호 복잡도 확인
+    $complexFlag = Check-Complexity -Password $password
+
+    # 결과 기록
+    if (-not $complexFlag -or $weakFlag) {
+        Add-Content -Path $logFile -Value "[취약] 계정: $username, 비밀번호: $password"
+    } else {
+        Add-Content -Path $logFile -Value "[양호] 계정: $username"
+    }
+}
+
+Write-Host "점검 완료. 결과는 $logFile 파일을 확인하세요."
+
+# 복잡도 확인 함수
+function Check-Complexity {
+    param (
+        [string]$Password
+    )
+
+    # 조건 초기화
+    $hasLetter = $Password -match "[a-zA-Z]"
+    $hasDigit = $Password -match "\d"
+    $hasSpecial = $Password -match "[\W]"
+    $length = $Password.Length
+
+    # 복잡도 조건 확인
+    if (($hasLetter -and $hasDigit -and $length -ge 10) -or
+        ($hasLetter -and $hasDigit -and $hasSpecial -and $length -ge 8)) {
+        return $true
+    }
+    return $false
+}
