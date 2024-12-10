@@ -1,44 +1,38 @@
 @echo off
-setlocal EnableDelayedExpansion
+:: WITH GRANT OPTION 설정 점검 스크립트
+:: 점검 결과는 grant_option_check.log에 저장됩니다.
 
-echo ============================================
-echo CODE [DBM-024] 불필요하게 'WITH GRANT OPTION' 옵션이 설정된 권한 확인
-echo ============================================
-echo [양호]: 'WITH GRANT OPTION'이 불필요하게 설정되지 않은 경우
-echo [취약]: 'WITH GRANT OPTION'이 불필요하게 설정된 권한이 있는 경우
-echo ============================================
+set LOG_FILE=grant_option_check.log
+echo [WITH GRANT OPTION 설정 점검 결과] > %LOG_FILE%
+echo 점검 시간: %date% %time% >> %LOG_FILE%
+echo ======================================== >> %LOG_FILE%
 
-echo 지원하는 데이터베이스: 
-echo 1. MySQL 
-echo 2. PostgreSQL 
-echo 3. Oracle
-echo 4. MSSQL
-echo.
+:: Oracle 데이터베이스 접속 정보
+set ORACLE_HOME=C:\oracle\product\19.0.0\dbhome_1
+set PATH=%ORACLE_HOME%\bin;%PATH%
+set USERNAME=sys
+set PASSWORD=yourpassword
+set TNS_ALIAS=orcl
 
-set /p DBType="데이터베이스 유형 번호를 입력하세요: "
-set /p DBUser="데이터베이스 사용자 이름을 입력하세요: "
-set /p DBPass="데이터베이스 비밀번호를 입력하세요: "
+:: SQL*Plus 실행 및 결과 기록
+echo SQL*Plus 실행 중... >> %LOG_FILE%
+sqlplus -s %USERNAME%/%PASSWORD%@%TNS_ALIAS% as sysdba >> %LOG_FILE% <<EOF
+SET HEADING OFF;
+SET FEEDBACK OFF;
+SET LINESIZE 200;
+SELECT grantee, privilege, admin_option
+FROM dba_sys_privs
+WHERE admin_option = 'YES';
 
-if "!DBType!"=="1" (
-    echo MySQL에서 'WITH GRANT OPTION'으로 부여된 불필요한 권한을 확인 중...
-    mysql -u !DBUser! -p!DBPass! -e "SELECT GRANTEE, PRIVILEGE_TYPE FROM information_schema.user_privileges WHERE IS_GRANTABLE = 'YES';"
-) else if "!DBType!"=="2" (
-    echo PostgreSQL에서 'WITH GRANT OPTION'으로 부여된 불필요한 권한을 확인 중...
-    psql -U !DBUser! -w -c "SELECT grantee, privilege_type FROM information_schema.role_usage_grants WHERE is_grantable = 'YES';"
-) else if "!DBType!"=="3" (
-    echo Oracle에서 'WITH GRANT OPTION'으로 부여된 권한을 확인 중...
-    echo SELECT grantee, privilege FROM dba_sys_privs WHERE admin_option = 'YES';
-) else if "!DBType!"=="4" (
-    echo MSSQL에서 'WITH GRANT OPTION'으로 부여된 불필요한 권한을 확인 중...
-    echo 주의: 이 스크립트는 MSSQL의 sqlcmd 유틸리티를 사용합니다. MSSQL 서버에 연결하는 데 필요한 옵션을 적절히 조정하세요.
-    sqlcmd -S 서버명 -U !DBUser! -P !DBPass! -Q "SELECT dp.name AS Grantee, perm.permission_name, perm.state_desc FROM sys.database_permissions AS perm INNER JOIN sys.database_principals AS dp ON perm.grantee_principal_id = dp.principal_id WHERE perm.state = 'W';"
-) else (
-    echo 지원하지 않는 데이터베이스 유형입니다.
-    goto end
-)
+SELECT grantee, privilege, grantable
+FROM dba_tab_privs
+WHERE grantable = 'YES';
 
-echo 설정을 검토하여 불필요하게 'WITH GRANT OPTION'이 설정된 권한이 없는지 확인하세요.
+SELECT grantee, granted_role, admin_option
+FROM dba_role_privs
+WHERE admin_option = 'YES';
+EXIT;
+EOF
 
-:end
-echo ============================================
+echo 점검이 완료되었습니다. 결과는 %LOG_FILE% 파일에서 확인하세요.
 pause
