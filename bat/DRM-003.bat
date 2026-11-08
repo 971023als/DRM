@@ -47,14 +47,14 @@ exit /b
 set "last_login_date=%~1"
 
 :: 날짜 형식: YYYYMMDD로 변환
-set /a last_year=!last_login_date:~0,4!
-set /a last_month=!last_login_date:~4,2!
-set /a last_day=!last_login_date:~6,2!
+set /a "last_year=1!last_login_date:~0,4! - 10000"
+set /a "last_month=1!last_login_date:~4,2! - 100"
+set /a "last_day=1!last_login_date:~6,2! - 100"
 
 :: 현재 날짜 계산
-set /a current_year=%current_date:~0,4%
-set /a current_month=%current_date:~4,2%
-set /a current_day=%current_date:~6,2%
+set /a "current_year=1%current_date:~0,4% - 10000"
+set /a "current_month=1%current_date:~4,2% - 100"
+set /a "current_day=1%current_date:~6,2% - 100"
 
 :: 날짜 비교 (단순 비교)
 set /a diff_days=((current_year*365 + current_month*30 + current_day) - (last_year*365 + last_month*30 + last_day))
